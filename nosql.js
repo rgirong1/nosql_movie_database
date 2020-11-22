@@ -13,7 +13,7 @@ var choice = 0;
 var fdstr = [];
 
 function choosePrompt() {
-    console.log("Nosql Interface (Choose what you want to do): \n 1. Read Rating Data from File(s) \n 2. Add new rating \n 3. Add new movie entry \n 4. Display movies in database \n 5. Display all user ratings \n 6. Show Aggregate Ratings \n 7. Get Movies Recommended by Genre \n 8. Get Movies Recommended from Users Like You \n 9. Exit \n\n");
+    console.log("Nosql Interface (Choose what you want to do): \n 1. Read Rating Data from File(s) \n 2. Add new rating \n 3. Add new movie entry \n 4. Display movies in database \n 5. Display all user ratings \n 6. Show Aggregate Ratings \n 7. Get Movies Recommended by Genre \n 8. Find Users Like You \n 9. Exit \n\n");
     var promptres = prompt("Enter Choice:");
     return promptres;
     //console.clear();
@@ -28,15 +28,10 @@ function readFile() {
 async function getFileData(client) {
     filename = readFile();
     var filedata = fs.readFileSync(filename);
+    var ratingdata = fs.readFileSync("ratings.dat");
     fdcollect = "Movies";
     if (filename == "movies.dat") {
-        fdstr = parseMovieDataSet(client, filedata);
-        /*
-        fdstr = [
-            {name: "movietitle", year: "movieyear", genre: "moviegenres"},
-            {name: "movietitle", year: "movieyear", genre: "moviegenres"}
-        ]
-        */
+        fdstr = parseMovieDataSet(client, filedata, ratingdata);
         console.log(fdstr);
         
         const res = await client.db("MovieRatings").collection("Movies").insertMany(fdstr);
@@ -45,7 +40,7 @@ async function getFileData(client) {
         //console.log(mfstr);
     }
     if (filename == "users.dat") {
-        fdstr = parseUserDataSet(client, filedata);
+        fdstr = parseUserDataSet(client, filedata, ratingdata);
 
         console.log(fdstr);
         
@@ -68,7 +63,7 @@ async function getFileData(client) {
 }
 
 ///Takes the data from the movie dataset and converts it into the proper object format
-function parseMovieDataSet(client, data) {
+function parseMovieDataSet(client, data, ratingdata) {
     
     //Split Data into array of strings
     var movstr = data.toString().split(/\r?\n/);
@@ -87,7 +82,7 @@ function parseMovieDataSet(client, data) {
 }
 
 ///Takes the data from the user dataset and converts it into the proper object format
-function parseUserDataSet(client, data) {
+function parseUserDataSet(client, data, ratingdata) {
     
     //Split Data into array of strings
     var usrstr = data.toString().split(/\r?\n/);
@@ -126,7 +121,7 @@ function parseRatingDataSet(client, data) {
 }
 
 //Ask User for movie title and rating in order to add it to the database. If the movie does not currently exist in the database it will ask the user for additional information to make an entry for this movie.
-async function addRating(client, movietitle, movierating) {
+async function addRating(client) {
     var movietitle = prompt("Enter Name of Movie: ");
     var movierating = parseInt(prompt("Enter Rating: "));
 
@@ -164,7 +159,7 @@ function newMovieEntry(title) {
     return [movieyear, moviegenres];
 }
 
-//Directly add a movie entry without rating it
+//Directly add a movie entry to the database, with empty ratings field
 async function addMovie(client) {
     var movietitle = prompt("Enter Name of Movie: ");
     var movieyear = prompt("Enter Movie Year: ");
@@ -173,8 +168,20 @@ async function addMovie(client) {
     var movieobj = {name: movietitle, year: movieyear, genre: moviegenres.split(","), ratings: []};
         
     const res = await client.db("MovieRatings").collection("Movies").insertOne(movieobj);
-    console.log(`${res.insertedCount} movie added with id:`);
-    console.log(res.insertedID);
+    console.log(`${res.insertedCount} movie added with name: ${res.name}`);
+    //console.log(res.insertedID);
+}
+
+//Directly add a user entry to the database, with empty ratings field
+async function addUser(client) {
+    var twitterhandle = prompt("Enter twitter id: ");
+    
+    var userobj = {id: userlogin, twitterID: twitterhandle, ratings: []};
+        
+    const res = await client.db("MovieRatings").collection("Users").insertOne(userobj);
+    
+    //console.log(`${res.insertedCount} user added with id: ${res.id}`);
+    //console.log(res.insertedID);
 }
 
 //Display all movies currently in the database
@@ -198,7 +205,7 @@ async function getMovies(client) {
             console.log(`${i + 1}. name: ${res.name} (${res.year})`);
             console.log(`  _id: ${res._id}`);
             console.log(`  genre's: ${res.genre}`);
-            console.log(`  ratings: ${res.ratings}`);
+            //console.log(`  ratings: ${res.ratings}`);
         });
         //console.log(res);
     } else {
@@ -243,7 +250,8 @@ async function getRatingsUser(client) {
                 //console.log(res.ratings[i]);
                 console.log(`${i + 1}. ${res.ratings[i].movie} rating: ${res.ratings[i].rating}/10`);
                 //console.log(`  _id: ${res._id}`);
-                console.log(`  rating time: ${res.ratings[i].ratingtime}`);
+                var hd = new Date(res.ratings[i].ratingtime).toLocaleDateString("en-US")
+                console.log(`  rating date: ${hd}`);
             }
         });
         //console.log(res);
@@ -272,8 +280,8 @@ async function getAggregateRatings(client) {
             _id: "$name",
             avgRating: {$avg: "$ratings.rating"},
             //ratingtime: "$ratingtime"
-        }
-        }
+        }},
+        {$sort: {avgRating: -1}}
     ]);
     
     const res = await aggCursor.toArray();
@@ -305,7 +313,8 @@ async function getRecommendedMovieByGenre(client) {
             _id: "$name",
             avgRating: {$avg: "$ratings.rating"},
             //ratingtime: "$ratingtime"
-        }}
+        }},
+        {$sort: {avgRating: -1}}
         /*
         {"$lookup": {
             "from": "Movies",
@@ -329,10 +338,10 @@ async function getRecommendedMovieByGenre(client) {
     
     const res = await aggCursor.toArray();
     
-    console.log(res);
+    //console.log(res);
     
     if (res.length > 0) {
-        console.log(`Ratings from database:`);
+        console.log(`Movies in the ${genreSearch} genre you might like:`);
         res.forEach((res, i) => {
             //date = new Date(res.)       
             
@@ -340,32 +349,55 @@ async function getRecommendedMovieByGenre(client) {
             console.log(`${i + 1}. ${res._id} rating: ${res.avgRating}`);
         });
     } else {
-        console.log('No Ratings Found');
+        console.log('No Movies Found');
     }
 }
 
 // Check user's ratings, tries to query a search that will display movies that are highly rated by users with similar ratings to the user in question.
-async function getRecommendedMovieByPreference(client) {
+async function findUsersWithSimilarTaste(client) {
+    var movieSearch = prompt("Enter movie you like: ");
     
-}
-/*
-// Query to display top rated films by genre
-function topMoviesByGenre(client){
-    MongoClient.connect(url, function(err, db) {
-        if (err) throw err;
-        
-        var dbo = db.db("mdb");
-        
-        var query = {genre: "action"};
-        dbo.collection("Mov").find(query, {projection: { _id: 0, name: 1, year: 1, genre: 1}}).toArray(function(err, res) {
-            if (err) throw err;
-            console.log(res);
-            db.close();
+    const aggCursor = await client.db("MovieRatings").collection("Users").aggregate([
+        {"$unwind": "$ratings"},
+        /*
+        {"$group": {
+            _id: "$ratings"
+            //ratingtime: "$ratingtime"
+        }},*/
+        {"$match": {"ratings.rating": {$gt: 5}}},
+        {"$match": {"ratings.movie": movieSearch}}
+        //{"$elemMatch": {"ratings.movie": movieSearch}}
+        //{$addFields: { moviesrated: "$ratings.name"}},
+        /*
+        { $cond: { if: {"$match": {"ratings.movie": movieSearch}}, 
+                   then: {"ratings.rating": {$gt: 5}}, else: {"$match": {"ratings.movie": movieSearch}}}
+        }*/
+        //{"ratings.rating": {$elemMatch: {$gt: 5}}}
+        /*
+        {$group: {
+            _id: "$ratings.movie",
+            //avgRating: {$avg: "$rating"}
+            //ratingtime: "$ratingtime"
+        }}*/
+    ]);
+    
+    const res = await aggCursor.toArray();
+    
+    //console.log(res);
+    
+    if (res.length > 0) {
+        console.log(`User's that like ${movieSearch}:`);
+        res.forEach((res, i) => {
+            //date = new Date(res.)       
+            
+            console.log(`user id: ${res.id}, twitter id: ${res.twitterID}`);
+            //console.log(`${i + 1}. ${res._id} rating: ${res.avgRating}`);
         });
-    });
-    return console.log(res);
+    } else {
+        console.log('No Ratings Found');
+    }
 }
-*/
+
 async function userGUI(client) {
     choice = choosePrompt();
 
@@ -395,7 +427,8 @@ async function userGUI(client) {
                 await getRecommendedMovieByGenre(client);
                 break;
             case "8":
-                await getRecommendedMovieByPreference(client);
+                await findUsersWithSimilarTaste(client);
+                //await getRecommendedMovieByPreference(client);
                 break;
             case "9":
                 console.log("Exit");
