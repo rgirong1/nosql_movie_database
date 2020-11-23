@@ -13,7 +13,7 @@ var choice = 0;
 var fdstr = [];
 
 function choosePrompt() {
-    console.log("Nosql Interface (Choose what you want to do): \n 1. Read Rating Data from File(s) \n 2. Add new rating \n 3. Add new movie entry \n 4. Add new user account \n 5. Display movies in database \n 6. Display all user ratings \n 7. Show Aggregate Ratings \n 8. Get Movies Recommended by Genre \n 9. Find Users Like You \n 10. Exit \n\n");
+    console.log("Nosql Interface (Choose what you want to do): \n 1. Add new rating \n 2. Add new movie entry \n 3. Add new user account \n 4. Display movies in database \n 5. Display all user ratings \n 6. Show Aggregate Ratings \n 7. Get Movies Recommended by Genre \n 8. Find Users Like You \n 9. Exit \n\n");
     var promptres = prompt("Enter Choice:");
     return promptres;
     //console.clear();
@@ -378,7 +378,8 @@ async function getRecommendedMovieByGenre(client) {
             _id: "$name",
             avgRating: {$avg: "$ratings.rating"}
         }},
-        {$sort: {avgRating: -1}}
+        {$sort: {avgRating: -1}},
+        {$limit: 5}
         
     ]);
     
@@ -429,40 +430,40 @@ async function findUsersWithSimilarTaste(client) {
 async function userGUI(client) {
     choice = choosePrompt();
 
-    var exitval = 10;
+    var exitval = 9;
     while (choice != exitval) {
         switch(choice) {
             case "1":
-                await getFileData(client);
-                break;
-            case "2":
                 var ratingres = await addRating(client);
                 console.log(ratingres[0] + ratingres[1]);
                 break;
-            case "3":
+            case "2":
                 await addMovie(client);
                 break;
-            case "4":
+            case "3":
                 await addUser(client);
                 break;
-            case "5":
+            case "4":
                 await getMovies(client);
                 break;
-            case "6":
+            case "5":
                 await getUserRatings(client);
                 break;
-            case "7":
+            case "6":
                 await getAggregateRatings(client);
                 break;
-            case "8":
+            case "7":
                 await getRecommendedMovieByGenre(client);
                 break;
-            case "9":
+            case "8":
                 await findUsersWithSimilarTaste(client);
                 //await getRecommendedMovieByPreference(client);
                 break;
-            case "10":
+            case "9":
                 console.log("Exit");
+                break;
+            case "10":
+                await getFileData(client);
                 break;
             case "11":
                 await clearCollections(client);
