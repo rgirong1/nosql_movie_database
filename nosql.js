@@ -75,7 +75,7 @@ function parseMovieDataSet(client, data, ratingdata) {
     var mformatobj = [];
     var mobj = [];
     for(var i = 0; i <= 100; i++) {
-        var mformatstr = '[{ "id":  "' + movstr[i].replace('::','", "name": "').replace(' (','", "year": "').replace(')','').replace('::','", "genre": ["').replace('|','", "') + '"]' /*+ '"ratings": []'*/ + '}]';
+        var mformatstr = '[{ "id":  "' + movstr[i].replace('::','", "name": "').replace(' (','", "year": "').replace(')','').replace('::','", "genre": ["').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "') + '"]' /*+ '"ratings": []'*/ + '}]';
         mobj = JSON.parse(mformatstr);
         mformatobj.push(mobj[0]);
         mformatobj[i].ratings = [];
@@ -140,7 +140,7 @@ function parseUserDataSet(client, data, ratingdata, moviedata) {
     var mformatobj = [];
     var mobj = [];
     for(var i = 0; i <= 100; i++) {
-        var mformatstr = '[{ "id":  "' + movstr[i].replace('::','", "name": "').replace(' (','", "year": "').replace(')','').replace('::','", "genre": ["').replace('|','", "') + '"]' + '}]';
+        var mformatstr = '[{ "id":  "' + movstr[i].replace('::','", "name": "').replace(' (','", "year": "').replace(')','').replace('::','", "genre": ["').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "').replace('|','", "') + '"]' + '}]';
         mobj = JSON.parse(mformatstr);
         mformatobj.push(mobj[0]);
     }
@@ -148,7 +148,7 @@ function parseUserDataSet(client, data, ratingdata, moviedata) {
     for (var i = 0; i < mformatobj.length; i++){
         for (var j = 0; j < rformatobj.length; j++) {
             if (rformatobj[j].movieID == mformatobj[i].id) {
-                rformatobj[j].movieID = mformatobj[i].id;
+                rformatobj[j].movieID = mformatobj[i].name;
                 console.log(rformatobj[j]);
             }
         }
@@ -435,7 +435,8 @@ async function userGUI(client) {
         switch(choice) {
             case "1":
                 var ratingres = await addRating(client);
-                console.log(ratingres[0] + ratingres[1]);
+                console.log(ratingres[0] + " | Rating: " + 
+                            ratingres[1]);
                 break;
             case "2":
                 await addMovie(client);
@@ -484,7 +485,7 @@ async function listDatabases(client) {
 }
 
 async function main() {
-    const uri = "mongodb+srv://rgirong1:rgirong1mongodbbing@cluster0.oelf3.mongodb.net/<dbname>?retryWrites=true&w=majority";
+    const uri = "mongodb+srv://proj3nosql:proj3nosqlmongodbbing@cluster0.oelf3.mongodb.net/<dbname>?retryWrites=true&w=majority";
     const client = new MongoClient(uri, {useNewUrlParser: true, useUnifiedTopology: true});
     try {
         await client.connect();
